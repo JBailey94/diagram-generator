@@ -1,268 +1,173 @@
 # DiagramGenerator
 
-Roslyn-powered Mermaid UML class diagram generator for C# solutions.
+Roslyn-powered Mermaid UML class diagram generator for C# `.slnx` solutions.
 
-`DiagramGenerator` analyzes a `.slnx` solution, infers class relationships, and writes Mermaid `classDiagram` files you can render anywhere Mermaid is supported.
+This README is release-first: use the prebuilt binaries from GitHub Releases instead of building from source.
 
-## Features
+## TL;DR
 
-- Analyzes C# projects from a `.slnx` solution.
-- Uses `Microsoft.CodeAnalysis` (Roslyn) for semantic analysis.
-- Emits UML relationship types with labels:
-- `inheritance`, `realization`, `dependency`, `association`, `aggregation`, `composition`.
-- Supports compact output for large codebases.
-- Supports namespace-split output files.
-- Supports namespace include/exclude filtering.
-- Supports dependency edge throttling for readability.
-- Supports optional heuristic details in edge labels.
-- Uses Serilog structured logs for diagnostics.
+1. Download release zip (`win-x64` or `linux-x64`).
+2. Run the binary against your `.slnx`.
+3. Open generated `.mmd` files.
 
-## Requirements
-
-- .NET SDK 10.0 (project currently targets `net10.0`).
-- A valid `.slnx` file as input.
-
-## Quick Start (Release Build, No `dotnet run`)
-
-### 1. Build Release
-
-From repository root:
+Windows:
 
 ```powershell
-dotnet build .\DiagramGenerator.slnx -c Release
+.\DiagramGenerator.exe .\MySolution.slnx -o .\generated --compact --split-by-namespace
 ```
 
-Linux/macOS:
+Linux:
 
 ```bash
-dotnet build ./DiagramGenerator.slnx -c Release
+chmod +x ./DiagramGenerator
+./DiagramGenerator ./MySolution.slnx -o ./generated --compact --split-by-namespace
 ```
 
-### 2. Run the compiled app
+## Install
 
-#### Windows (framework-dependent executable)
+From the latest GitHub Release, download one of these assets:
+
+- `DiagramGenerator-win-x64.zip`
+- `DiagramGenerator-linux-x64.zip`
+
+## Usage
+
+### Windows
+
+1. Extract `DiagramGenerator-win-x64.zip`.
+2. Run from the folder containing `DiagramGenerator.exe`:
 
 ```powershell
-.\src\bin\Release\net10.0\DiagramGenerator.exe .\DiagramGenerator.slnx -o .\generated
+.\DiagramGenerator.exe .\MySolution.slnx -o .\generated
 ```
 
-#### Linux (framework-dependent executable)
+### Linux
+
+1. Extract `DiagramGenerator-linux-x64.zip`.
+2. Make executable (once):
 
 ```bash
-./src/bin/Release/net10.0/DiagramGenerator ./DiagramGenerator.slnx -o ./generated
+chmod +x ./DiagramGenerator
 ```
 
-#### Any OS (DLL host)
+3. Run:
 
 ```bash
-dotnet ./src/bin/Release/net10.0/DiagramGenerator.dll ./DiagramGenerator.slnx -o ./generated
+./DiagramGenerator ./MySolution.slnx -o ./generated
 ```
 
-## Publish a Portable Release Artifact
+### Common Commands
 
-### Framework-dependent publish
+Readable architecture view:
+
+Windows:
 
 ```powershell
-dotnet publish .\src\DiagramGenerator.csproj -c Release -o .\artifacts\publish
+.\DiagramGenerator.exe .\MySolution.slnx -o .\generated --compact --split-by-namespace --hide-members --max-dependencies-per-type 3
 ```
 
-Linux/macOS:
+Linux:
 
 ```bash
-dotnet publish ./src/DiagramGenerator.csproj -c Release -o ./artifacts/publish
+./DiagramGenerator ./MySolution.slnx -o ./generated --compact --split-by-namespace --hide-members --max-dependencies-per-type 3
 ```
 
-Run:
+Show heuristic confidence/evidence:
 
-```powershell
-.\artifacts\publish\DiagramGenerator.exe .\DiagramGenerator.slnx -o .\generated
+```text
+--show-heuristics
 ```
 
-Linux/macOS run:
+Focus on specific namespaces:
 
-```bash
-./artifacts/publish/DiagramGenerator ./DiagramGenerator.slnx -o ./generated
+```text
+--include-namespace MyCompany.Domain --exclude-namespace MyCompany.Domain.Tests
 ```
 
-### Self-contained single-file publish (Windows x64)
-
-```powershell
-dotnet publish .\src\DiagramGenerator.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true -o .\artifacts\publish-win-x64
-```
-
-Run:
-
-```powershell
-.\artifacts\publish-win-x64\DiagramGenerator.exe .\DiagramGenerator.slnx -o .\generated
-```
-
-### Self-contained single-file publish (Linux x64)
-
-```bash
-dotnet publish ./src/DiagramGenerator.csproj -c Release -r linux-x64 --self-contained true /p:PublishSingleFile=true -o ./artifacts/publish-linux-x64
-```
-
-Run:
-
-```bash
-chmod +x ./artifacts/publish-linux-x64/DiagramGenerator
-./artifacts/publish-linux-x64/DiagramGenerator ./DiagramGenerator.slnx -o ./generated
-```
-
-## CLI Usage
+## CLI Reference
 
 ```text
 DiagramGenerator <solution.slnx> -o <output-directory> [--compact] [--split-by-namespace] [--show-heuristics] [--hide-members] [--max-dependencies-per-type <n>] [--include-namespace <prefix>] [--exclude-namespace <prefix>]
 ```
 
-### Arguments
+Arguments:
 
-- `<solution.slnx>`: Required. Path to the input solution.
-- `-o`, `--output`: Required. Output directory for generated `.mmd` files.
+- `<solution.slnx>`: required input solution.
+- `-o`, `--output`: required output directory.
 
-### Options
+Options:
 
 - `--compact`: Simplifies output for readability.
-- `--split-by-namespace`: Creates additional per-namespace diagram files.
+- `--split-by-namespace`: Creates additional per-namespace diagrams.
 - `--show-heuristics`: Appends confidence/evidence to relationship labels.
-- `--hide-members`: Hides properties/fields/methods and shows type-level architecture only.
-- `--max-dependencies-per-type <n>`: Limits dependency edges per source type.
-- `--include-namespace <prefix>`: Include only types whose namespace starts with prefix.
+- `--hide-members`: Hides type members for architecture-only diagrams.
+- `--max-dependencies-per-type <n>`: Caps dependency edges per source type.
+- `--include-namespace <prefix>`: Include only namespaces starting with prefix.
 - Can be repeated or comma-separated.
-- `--exclude-namespace <prefix>`: Exclude types whose namespace starts with prefix.
+- `--exclude-namespace <prefix>`: Exclude namespaces starting with prefix.
 - Can be repeated or comma-separated.
 
-## Examples
+## Output
 
-### Basic
+- Main file: `<SolutionName>.mmd`
+- With split mode: `<SolutionName>.<NamespaceGroup>.mmd`
 
-```powershell
-.\src\bin\Release\net10.0\DiagramGenerator.exe .\MySolution.slnx -o .\diagrams
-```
+When `--split-by-namespace` is used, stale split files from previous runs are automatically removed.
 
-### Large solution, readability-focused
+## Dev Integration
 
-```powershell
-.\src\bin\Release\net10.0\DiagramGenerator.exe .\MySolution.slnx -o .\diagrams --compact --split-by-namespace --hide-members --max-dependencies-per-type 3
-```
-
-### Domain-focused view only
-
-```powershell
-.\src\bin\Release\net10.0\DiagramGenerator.exe .\MySolution.slnx -o .\diagrams --compact --include-namespace MyCompany.Domain --exclude-namespace MyCompany.Domain.Tests
-```
-
-### Audit inferred relationships
-
-```powershell
-.\src\bin\Release\net10.0\DiagramGenerator.exe .\MySolution.slnx -o .\diagrams --compact --show-heuristics
-```
-
-## Output Files
-
-By default:
-
-- `<SolutionName>.mmd`
-
-With `--split-by-namespace` enabled:
-
-- `<SolutionName>.<NamespaceGroup>.mmd` (for each namespace group)
-
-The generator also removes stale split files from previous runs when split output is enabled.
-
-## Use From Another Project (Auto-Generate In Development)
-
-If you want another solution/project to regenerate diagrams automatically during local development, the most reliable approach is:
-
-1. Build/publish `DiagramGenerator` once.
-2. Call the compiled executable from an MSBuild target that runs only for Debug (or when an opt-in property is set).
-
-This works on Linux too; use an OS-specific path for `DiagramGeneratorExe`.
-
-### Example: call published executable from your app `.csproj`
-
-Add this to the consuming project file:
+Add this to your consuming project's `.csproj` (or `Directory.Build.targets`) to run after Debug builds.
 
 ```xml
 <PropertyGroup>
-	<!-- Set path to your compiled DiagramGenerator executable -->
-	<DiagramGeneratorExe Condition="'$(OS)'=='Windows_NT'">C:\tools\DiagramGenerator\DiagramGenerator.exe</DiagramGeneratorExe>
-	<DiagramGeneratorExe Condition="'$(OS)'!='Windows_NT'">/opt/diagramgenerator/DiagramGenerator</DiagramGeneratorExe>
-
-	<!-- Optional: path to the solution you want analyzed -->
-	<DiagramGeneratorSolution>$(SolutionDir)MySolution.slnx</DiagramGeneratorSolution>
-
-	<!-- Optional: output folder for diagrams -->
-	<DiagramGeneratorOutput>$(SolutionDir)generated</DiagramGeneratorOutput>
-
-	<!-- Enable in Debug by default; can be overridden via /p:GenerateDiagrams=true|false -->
-	<GenerateDiagrams Condition="'$(GenerateDiagrams)'=='' and '$(Configuration)'=='Debug'">true</GenerateDiagrams>
+  <DiagramGeneratorExe Condition="'$(OS)'=='Windows_NT'">C:\tools\DiagramGenerator\DiagramGenerator.exe</DiagramGeneratorExe>
+  <DiagramGeneratorExe Condition="'$(OS)'!='Windows_NT'">/opt/diagramgenerator/DiagramGenerator</DiagramGeneratorExe>
+  <DiagramGeneratorSolution>$(SolutionDir)MySolution.slnx</DiagramGeneratorSolution>
+  <DiagramGeneratorOutput>$(SolutionDir)generated</DiagramGeneratorOutput>
+  <GenerateDiagrams Condition="'$(GenerateDiagrams)'=='' and '$(Configuration)'=='Debug'">true</GenerateDiagrams>
 </PropertyGroup>
 
 <Target Name="GenerateUmlDiagrams" AfterTargets="Build" Condition="'$(GenerateDiagrams)'=='true' and Exists('$(DiagramGeneratorExe)') and Exists('$(DiagramGeneratorSolution)')">
-	<Message Importance="high" Text="Generating Mermaid UML diagrams..." />
-	<Exec Command="&quot;$(DiagramGeneratorExe)&quot; &quot;$(DiagramGeneratorSolution)&quot; -o &quot;$(DiagramGeneratorOutput)&quot; --compact --split-by-namespace --hide-members" />
+  <Exec Command="&quot;$(DiagramGeneratorExe)&quot; &quot;$(DiagramGeneratorSolution)&quot; -o &quot;$(DiagramGeneratorOutput)&quot; --compact --split-by-namespace --hide-members" />
 </Target>
 ```
 
-### Notes
+Tips:
 
-- This runs after each build when enabled.
-- For CI or Release builds, disable with:
+- Disable on demand: `dotnet build /p:GenerateDiagrams=false`
+- Linux binary usually needs execute permission:
 
-```powershell
-dotnet build .\MySolution.slnx -c Release /p:GenerateDiagrams=false
+```bash
+chmod +x /opt/diagramgenerator/DiagramGenerator
 ```
 
-- You can keep diagrams optional for developers by not committing the executable path and passing it from environment-specific MSBuild props.
-- On Linux, make sure the executable has permission to run: `chmod +x /opt/diagramgenerator/DiagramGenerator`.
+## FAQ
 
-## Relationship Heuristics (Summary)
+### Should I add this to `.slnx`?
 
-- Inheritance and interface realization come from semantic type hierarchy.
-- Field/property references infer structural relationships.
-- Collection fields/properties infer aggregation.
-- Private readonly concrete fields are treated as high-confidence composition.
-- Method signature type usage infers dependency (lower confidence).
+No. Add the target to a `.csproj` or `Directory.Build.targets`. That is where MSBuild build hooks belong.
 
-When `--show-heuristics` is enabled, labels include confidence and evidence.
+### Why do I only get one `.mmd` file?
 
-## Troubleshooting
+That is expected unless `--split-by-namespace` is enabled.
 
-### Build warnings about MSBuild packages
+### Why do dependency lines still look busy?
 
-You may see vulnerability warnings from transitive MSBuild dependencies used by Roslyn workspace loading. Current behavior is non-blocking.
+Use a stricter command:
 
-### No output or empty diagrams
-
-- Verify input path points to a valid `.slnx`.
-- Confirm projects are C# projects and restore/build successfully.
-- Remove restrictive filters (`--include-namespace`, `--exclude-namespace`) and re-run.
-
-### Logs
-
-Serilog logs progress and diagnostics to console. Typical milestones:
-
-- solution loaded
-- project count discovered
-- analysis type/relationship counts
-- file write paths
-
-## Development
-
-### Run tests/build
-
-```powershell
-dotnet build .\DiagramGenerator.slnx
+```text
+--compact --hide-members --max-dependencies-per-type 2 --split-by-namespace
 ```
 
-### Local debug run
+You can also scope with `--include-namespace` and `--exclude-namespace`.
 
-```powershell
-dotnet run --project .\src\DiagramGenerator.csproj -- .\DiagramGenerator.slnx -o .\generated --compact --split-by-namespace
+## Build From Source (Optional)
+
+```bash
+dotnet build ./DiagramGenerator.slnx -c Release
 ```
 
-Linux/macOS:
+Local dev run:
 
 ```bash
 dotnet run --project ./src/DiagramGenerator.csproj -- ./DiagramGenerator.slnx -o ./generated --compact --split-by-namespace
